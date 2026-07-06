@@ -1,0 +1,18 @@
+services:
+  users-api:
+    build: .
+    container_name: users-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres-db
+
+  postgres-db:
+    image: postgres:16
+    container_name: postgres-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_DB: users
+    ports:
+      - "5432:5432"

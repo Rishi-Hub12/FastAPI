@@ -1,82 +1,25 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
+from sqlalchemy.orm import Session
+
+from database import Base, engine, get_db
+from models import User
 
 app = FastAPI()
 
-users = [
-    {
-        "id": 1,
-        "name": "Rishi",
-        "age": 24,
-        "city": "Chennai"
-    },
-    {
-        "id": 2,
-        "name": "Arun",
-        "age": 25,
-        "city": "Madurai"
-    },
-    {
-        "id": 3,
-        "name": "Kumar",
-        "age": 26,
-        "city": "Coimbatore"
-    },
-    {
-        "id": 4,
-        "name": "Ajith",
-        "age": 27,
-        "city": "Kerla"
-    },
-    {
-        "id": 5,
-        "name": "Vijay",
-        "age": 23,
-        "city": "Ooty"
-    },
-    {
-        "id": 6,
-        "name": "Praveen",
-        "age": 26,
-        "city": "Mysore"
-    },
-    {
-        "id": 7,
-        "name": "Naveen",
-        "age": 21,
-        "city": "Bangalore"
-    },
-    {
-        "id": 8,
-        "name": "Sarath",
-        "age": 26,
-        "city": "Vellore"
-    },
-    {
-        "id": 9,
-        "name": "Ajay",
-        "age": 26,
-        "city": "Trichy"
-    },
-    {
-        "id": 10,
-        "name": "Akash",
-        "age": 26,
-        "city": "Salem"
-    }
-    
-]
+Base.metadata.create_all(bind=engine)
 
 
 @app.get("/users", status_code=200)
-def all_users():
-    return users
+def get_all_users(db: Session = Depends(get_db)):
+    return db.query(User).all()
 
 
 @app.get("/users/{user_id}", status_code=200)
-def user_by_id(user_id: int):
-    for user in users:
-        if user["id"] == user_id:
-            return user
+def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if user:
+        return user
 
     raise HTTPException(
         status_code=404,
@@ -85,69 +28,82 @@ def user_by_id(user_id: int):
 
 
 @app.post("/users", status_code=201)
-def create_user(user: dict):
+def create_user(user: dict, db: Session = Depends(get_db)):
+    new_user = User(
+        id=user["id"],
+        name=user["name"],
+        age=user["age"],
+        city=user["city"]
+    )
 
-    users.append(user)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
 
     return {
         "message": "User created successfully",
-        "user": user
+        "user": new_user
     }
 
 
 @app.put("/users/{user_id}", status_code=200)
-def update_user(user_id: int, updated_user: dict):
+def update_user(user_id: int, updated_user: dict, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
 
-    for index, user in enumerate(users):
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
 
-        if user["id"] == user_id:
+    user.name = updated_user["name"]
+    user.age = updated_user["age"]
+    user.city = updated_user["city"]
 
-            users[index] = updated_user
+    db.commit()
+    db.refresh(user)
 
-            return {
-                "message": "User updated successfully",
-                "user": updated_user
-            }
-
-    raise HTTPException(
-        status_code=404,
-        detail="User not found"
-    )
+    return {
+        "message": "User updated successfully",
+        "user": user
+    }
 
 
 @app.patch("/users/{user_id}", status_code=200)
-def patch_user(user_id: int, updated_fields: dict):
+def patch_user(user_id: int, updated_fields: dict, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
 
-    for user in users:
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
 
-        if user["id"] == user_id:
+    for key, value in updated_fields.items():
+        setattr(user, key, value)
 
-            user.update(updated_fields)
+    db.commit()
+    db.refresh(user)
 
-            return {
-                "message": "User updated successfully",
-                "user": user
-            }
+    return {
+        "message": "User updated successfully",
+        "user": user
+    }
 
-    raise HTTPException(
-        status_code=404,
-        detail="User not found"
-    )
 
 @app.delete("/users/{user_id}", status_code=200)
-def delete_user(user_id: int):
+def delete_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
 
-    for user in users:
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
 
-        if user["id"] == user_id:
+    db.delete(user)
+    db.commit()
 
-            users.remove(user)
-
-            return {
-                "message": "User deleted successfully"
-            }
-
-    raise HTTPException(
-        status_code=404,
-        detail="User not found"
-    )
+    return {
+        "message": "User deleted successfully"
+    }
