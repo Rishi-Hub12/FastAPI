@@ -31,7 +31,7 @@ def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/users", status_code=201)
-def create_user(user: UserCreate, db: Session = Depends(get_db)):
+def create_user(user: None, db: Session = Depends(get_db)):
     new_user = User(
         id=user.id,
         name=user.name,
