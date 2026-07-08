@@ -13,7 +13,6 @@ Base.metadata.create_all(bind=engine)
 @app.get("/users", status_code=200, response_model=list[UserResponse])
 def get_all_users(db: Session = Depends(get_db)):
     users = db.query(User).all()
-
     return users
 
 
@@ -30,10 +29,9 @@ def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
     return user
 
 
-@app.post("/users", status_code=201)
+@app.post("/users", status_code=201, response_model=UserResponse)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
     new_user = User(
-        id=user.id,
         name=user.name,
         age=user.age,
         city=user.city
@@ -43,13 +41,10 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
-    return {
-        "message": "User created successfully",
-        "user": new_user
-    }
+    return new_user
 
 
-@app.put("/users/{user_id}", status_code=200)
+@app.put("/users/{user_id}", status_code=200, response_model=UserResponse)
 def update_user(user_id: int, updated_user: UserUpdate, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
 
@@ -66,13 +61,10 @@ def update_user(user_id: int, updated_user: UserUpdate, db: Session = Depends(ge
     db.commit()
     db.refresh(user)
 
-    return {
-        "message": "User updated successfully",
-        "user": user
-    }
+    return user
 
 
-@app.patch("/users/{user_id}", status_code=200)
+@app.patch("/users/{user_id}", status_code=200, response_model=UserResponse)
 def patch_user(user_id: int, updated_user: UserPatch, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
 
@@ -94,10 +86,7 @@ def patch_user(user_id: int, updated_user: UserPatch, db: Session = Depends(get_
     db.commit()
     db.refresh(user)
 
-    return {
-        "message": "User updated successfully",
-        "user": user
-    }
+    return user
 
 
 @app.delete("/users/{user_id}", status_code=200)
